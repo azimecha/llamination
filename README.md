@@ -12,7 +12,7 @@ This library is designed to:
  
 ## System requirements
 
-.NET Framework 2.0+ and .NET Standard 2.0+ are both supported. (The second one includes .NET Core 3+ and .NET 5+).
+.NET Framework 2.0+ and .NET Standard 2.0+ are both supported. (This includes .NET Core 3+ and .NET 5+).
 
 Because SAPI is part of Windows, the SAPI library only works there. Everything else is cross platform.
 
