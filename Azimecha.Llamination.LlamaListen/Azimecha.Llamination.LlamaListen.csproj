@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>Azimecha.Llamination.LlamaListen</RootNamespace>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Azimecha.Llamination\Azimecha.Llamination.csproj" />
+	</ItemGroup>
+
+</Project>
