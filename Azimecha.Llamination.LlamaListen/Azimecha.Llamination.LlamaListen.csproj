@@ -7,6 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\Azimecha.Llamination.DeepSpeech\Azimecha.Llamination.DeepSpeech.csproj" />
 	  <ProjectReference Include="..\Azimecha.Llamination\Azimecha.Llamination.csproj" />
 	</ItemGroup>
 

@@ -4,13 +4,16 @@ using System.Text;
 
 namespace Azimecha.Llamination {
     public class LlamaException : Exception {
+        public LlamaException() { }
         public LlamaException(string strMessage) : base(strMessage) { }
         public LlamaException(string strMessage, Exception exInner) : base(strMessage, exInner) { }
     }
 
     public class ModelLoadException : LlamaException {
         public ModelLoadException() : base($"Error loading model") { }
+        public ModelLoadException(Exception exInner) : base($"Error loading model") { }
         public ModelLoadException(string strFileName) : base($"Error loading model {strFileName}") { }
+        public ModelLoadException(string strFileName, Exception exInner) : base($"Error loading model {strFileName}", exInner) { }
     }
 
     public class TokenizationException : LlamaException {

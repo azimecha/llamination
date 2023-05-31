@@ -44,8 +44,8 @@ namespace Azimecha.Llamination {
             }
         }
 
-        public static unsafe void InterpetAsSamples<T>(byte[] arrData, int nBytes, T[] arrSamplesOut) where T : unmanaged {
-            int nSamples = nBytes / sizeof(T);
+        public static unsafe void InterpetAsSamples<T>(byte[] arrData, T[] arrSamplesOut) where T : unmanaged {
+            int nSamples = arrData.Length / sizeof(T);
             if (nSamples > arrSamplesOut.Length)
                 throw new IndexOutOfRangeException($"Cannot fit {arrData.Length} bytes in {arrSamplesOut.Length} sample array");
 
