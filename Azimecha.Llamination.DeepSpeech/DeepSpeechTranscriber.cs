@@ -6,80 +6,75 @@ using System.Threading;
 
 namespace Azimecha.Llamination.DeepSpeech {
     public class DeepSpeechTranscriber : ITranscriptionInterface {
-        private DeepSpeechModel _mdl;
-        private MetadataPointer _metaCur;
+        private DeepSpeechRawTranscriber _tscRaw;
+        private List<Segment> _lstSegments;
 
         public DeepSpeechTranscriber(DeepSpeechModel mdl) {
-            _mdl = mdl;
+            _tscRaw = new DeepSpeechRawTranscriber(mdl);
+            _lstSegments = new List<Segment>();
+
+            SegmentBreakThreshold = TimeSpan.FromSeconds(1);
+            SegmentEndMargin = TimeSpan.FromSeconds(1);
         }
+
+        public TimeSpan SegmentBreakThreshold { get; set; }
+        public TimeSpan SegmentEndMargin { get; set; }
 
         public void ProcessAudio(float[] arrSamples) {
-            short[] arrI16Samples = new short[arrSamples.Length];
+            if (_tscRaw is null)
+                throw new ObjectDisposedException(nameof(DeepSpeechTranscriber));
 
-            for (int i = 0; i < arrSamples.Length; i++)
-                arrI16Samples[i] = (short)(arrSamples[i] * short.MaxValue);
+            _tscRaw.ProcessAudio(arrSamples);
+            _lstSegments.Clear();
 
-            MetadataPointer metaNew = new MetadataPointer();
-            IntPtr pMeta = IntPtr.Zero;
+            Segment segCur = new Segment();
 
-            try {
-                pMeta = Native.Functions.DS_SpeechToTextWithMetadata(_mdl.StatePointer.Value, arrI16Samples, (uint)arrI16Samples.Length, 1);
+            for (int nRawSeg = 0; nRawSeg < _tscRaw.SegmentCount; nRawSeg++) {
+                TimeSpan tsRawStart = _tscRaw.GetStartOffset(nRawSeg);
+                string strRawText = _tscRaw.GetText(nRawSeg);
 
-                if (pMeta == IntPtr.Zero)
-                    throw new EvaluationException($"Error transcribing {arrSamples.Length} samples");
-
-                metaNew.Value = pMeta;
-            } finally {
-                if ((pMeta != IntPtr.Zero) && !metaNew.Initialized)
-                    Native.Functions.DS_FreeMetadata(pMeta);
+                if (nRawSeg == 0) {
+                    segCur.Text = strRawText;
+                    segCur.End = segCur.Start = tsRawStart;
+                } else if ((tsRawStart - segCur.End) < SegmentBreakThreshold) {
+                    segCur.Text += strRawText;
+                    segCur.End = tsRawStart;
+                } else {
+                    segCur.End += SegmentEndMargin;
+                    segCur.Text = segCur.Text.Trim();
+                    _lstSegments.Add(segCur);
+                    segCur.Text = strRawText;
+                    segCur.End = segCur.Start = tsRawStart;
+                }
             }
 
-            Interlocked.Exchange(ref _metaCur, metaNew)?.Dispose();
-        }
-
-        public unsafe int SegmentCount {
-            get {
-                if (_metaCur.Target.NumTranscripts == 0)
-                    return 0;
-                return (int)_metaCur.Target.Transcripts->NumTokens;
+            if (segCur.Text.Length > 0) {
+                segCur.End += SegmentEndMargin;
+                segCur.Text = segCur.Text.Trim();
+                _lstSegments.Add(segCur);
             }
         }
 
-        private unsafe void CheckSegmentIndex(int nSegment) {
-            if (_metaCur.Target.NumTranscripts == 0)
-                throw new IndexOutOfRangeException($"No segment {nSegment} (there was no successful transcript)");
+        public int SegmentCount => _lstSegments.Count;
 
-            if (nSegment >= _metaCur.Target.Transcripts->NumTokens)
-                throw new IndexOutOfRangeException($"No segment {nSegment} (there are only {_metaCur.Target.Transcripts->NumTokens})");
-        }
+        public TimeSpan GetStartOffset(int nSegment)
+            => _lstSegments[nSegment].Start;
 
-        public TimeSpan GetEndOffset(int nSegment) {
-            throw new NotSupportedException($"DeepSpeech does not provide segment length");
-        }
+        public TimeSpan GetEndOffset(int nSegment)
+            => _lstSegments[nSegment].End;
 
-        public unsafe TimeSpan GetStartOffset(int nSegment) {
-            CheckSegmentIndex(nSegment);
-            return TimeSpan.FromSeconds(_metaCur.Target.Transcripts->Tokens[nSegment].StartTime);
-        }
-
-        public unsafe string GetText(int nSegment) {
-            CheckSegmentIndex(nSegment);
-
-            byte* pText = _metaCur.Target.Transcripts->Tokens[nSegment].Text;
-            if (pText == (byte*)0) return null; // can this actually happen?
-
-            List<byte> lstUTF8Bytes = new List<byte>();
-            while (*pText != 0) {
-                lstUTF8Bytes.Add(*pText);
-                pText++;
-            }
-
-            return Encoding.UTF8.GetString(lstUTF8Bytes.ToArray());
-        }
+        public string GetText(int nSegment)
+            => _lstSegments[nSegment].Text;
 
         public void Dispose() {
-            Interlocked.Exchange(ref _metaCur, null)?.Dispose();
-            _mdl = null;
+            Interlocked.Exchange(ref _tscRaw, null)?.Dispose();
+            _lstSegments = null;
+        }
+
+        private struct Segment {
+            public string Text;
+            public TimeSpan Start;
+            public TimeSpan End;
         }
     }
 }
