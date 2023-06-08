@@ -11,5 +11,6 @@ namespace Azimecha.Llamination.FileFormats {
         public uint[] Pixels;
         public int Width;
         public int Height;
+        public bool IsValid => (Width * Height) == Pixels.Length;
     }
 }
