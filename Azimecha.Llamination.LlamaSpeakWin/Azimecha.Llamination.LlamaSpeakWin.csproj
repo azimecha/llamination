@@ -45,6 +45,10 @@
       <Project>{ef7e3f5e-8f97-44c9-b5c8-63c1eaf1f643}</Project>
       <Name>Azimecha.Llamination.SAPI</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Azimecha.Llamination.Vocaloid\Azimecha.Llamination.Vocaloid.csproj">
+      <Project>{1d5c53b5-baac-4943-bca2-0bea5bc7b016}</Project>
+      <Name>Azimecha.Llamination.Vocaloid</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Azimecha.Llamination\Azimecha.Llamination.csproj">
       <Project>{4df1835a-5177-4341-a1cd-888223ac33f4}</Project>
       <Name>Azimecha.Llamination</Name>

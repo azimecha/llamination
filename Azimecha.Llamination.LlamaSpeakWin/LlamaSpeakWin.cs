@@ -16,11 +16,18 @@ namespace Azimecha.Llamination.LlamaSpeakWin {
 
             try {
                 using (System.IO.Stream stmAudioFile = System.IO.File.Open(args[0], System.IO.FileMode.Create)) {
-                    SAPIVoice voice = new SAPIVoice();
+                    //ISpeechSynthesisModel voice = new SAPIVoice();
+                    ISpeechSynthesisModel voice = new Vocaloid.VocaloidForUnity.VforUVocaloid(
+                        @"E:\Projects\AI\Chadbot\VOCALOID_SDK_for_Unity\Assets\StreamingAssets\VOCALOID\DB_ini", 
+                        Vocaloid.VocaloidForUnity.Language.Japanese);
                     Console.WriteLine($"Active model: {voice.Name} ({voice.Gender})");
 
-                    IStatementSynthesizer synth = new SAPIStatementSynth(voice, 1, 16000);
+                    int nChannels = 1, nSampleRate = 16000;
+                    IStatementSynthesizer synth = voice.CreateStatementSynthesizer(ref nChannels, ref nSampleRate);
                     string strCurStatement;
+
+                    Console.WriteLine($"Channels: {nChannels}");
+                    Console.WriteLine($"Sample rate: {nSampleRate}");
 
                     while ((strCurStatement = Console.In.ReadLine()) != null) {
                         float[] arrSamples = synth.Synthesize(strCurStatement);
