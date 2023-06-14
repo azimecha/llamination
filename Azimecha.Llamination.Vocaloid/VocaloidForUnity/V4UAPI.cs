@@ -8,7 +8,6 @@ namespace Azimecha.Llamination.Vocaloid.VocaloidForUnity {
         private const string LIBRARY_NAME = "VforU_Win";
 
         public const int SAMPLE_RATE = 44100;
-        public static readonly Encoding TEXT_ENCODING = new UTF8Encoding(false);
 
         [DllImport(LIBRARY_NAME)]
         public static extern APIResult YVFStartup([In] byte[] arrTargetUTF8, [In] byte[] arrPathUTF8);

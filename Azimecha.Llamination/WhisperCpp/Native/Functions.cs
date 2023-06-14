@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Azimecha.Llamination.WhisperCpp.Native {
     internal static class WhisperFunctions {
-        public const string WHISPER_LIBRARY = "libwhisper";
+        public const string WHISPER_LIBRARY = "whisper";
 
         [DllImport(WHISPER_LIBRARY, CallingConvention = CallingConvention.Cdecl, EntryPoint = "whisper_init_from_file")]
         public static extern IntPtr WhisperInitFromFile([MarshalAs(UnmanagedType.LPStr)] string strPath);

@@ -26,13 +26,13 @@ namespace Azimecha.Llamination.Vocaloid.VocaloidForUnity {
         }
 
         private VforUState(string strINIFolderPath) {
-            APIErrorException.Check(V4UAPI.YVFStartup(V4UAPI.TEXT_ENCODING.GetBytes("personal"), V4UAPI.TEXT_ENCODING.GetBytes(strINIFolderPath)));
+            APIErrorException.Check(V4UAPI.YVFStartup(InteropUtils.ToNarrowString("personal"), InteropUtils.ToNarrowString(strINIFolderPath)));
             APIErrorException.Check(V4UAPI.YVFRealtimeSetStaticSetting(RealtimeMode.Mode2048));
             APIErrorException.Check(V4UAPI.YVFRealtimeStart());
         }
 
         public void SetLyrics(string strLyrics, Language lang)
-            => APIErrorException.Check(V4UAPI.YVFRealtimeSetLyrics(V4UAPI.TEXT_ENCODING.GetBytes(strLyrics), lang));
+            => APIErrorException.Check(V4UAPI.YVFRealtimeSetLyrics(InteropUtils.ToNarrowString(strLyrics), lang));
 
         public int LyricSyllables 
             => V4UAPI.YVFRealtimeGetSyllableCount();

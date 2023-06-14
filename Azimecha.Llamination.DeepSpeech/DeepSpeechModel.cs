@@ -11,7 +11,7 @@ namespace Azimecha.Llamination.DeepSpeech {
 
         public static DeepSpeechModel LoadFromFile(string strFilePath) {
             try {
-                byte[] arrPathUTF8 = System.Text.Encoding.UTF8.GetBytes(strFilePath);
+                byte[] arrPathUTF8 = InteropUtils.ToNarrowString(strFilePath);
 
                 ModelStatePointer mdl = new ModelStatePointer();
                 IntPtr pModel = IntPtr.Zero;

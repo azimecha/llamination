@@ -1,12 +1,14 @@
-﻿using System;
+﻿using Azimecha.Llamination.TextGeneration;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 
 namespace Azimecha.Llamination.LlamaCpp {
-    public class LlamaModel : TextGeneration.ITokenBasedLLM {
+    public class LlamaModel : ITokenBasedLLM {
         private Pointers.ContextPointer _ctx;
         private Preloader _pldModelFile;
+        private ITokenSampler _sampPenalizer, _sampFinal;
 
         internal LlamaModel(Pointers.ContextPointer ctx, string strFileForPreload = null) {
             _ctx = ctx;
@@ -14,34 +16,22 @@ namespace Azimecha.Llamination.LlamaCpp {
             Threads = Environment.ProcessorCount - 2;
             if (Threads < 1) Threads = 1;
 
-            TokenConsiderationCount = 40;
-            MinimumTokenProbability = 0.95f;
-            ParamTemp = 0.80f;
-            RepeatPenalty = 1.10f;
-
             if (strFileForPreload != null) {
                 _pldModelFile = new Preloader(strFileForPreload);
                 _pldModelFile.Start();
             }
+
+            _sampPenalizer = new Samplers.RepetitionPenalizer(this, 1.10f);
+            _sampFinal = new Samplers.MirostatV2Sampler(this);
         }
 
         public int Threads { get; set; }
 
-        public int TokenConsiderationCount { get; set; }
-        public float MinimumTokenProbability { get; set; }
-        public float ParamTemp { get; set; }
-        public float RepeatPenalty { get; set; }
+        internal Pointers.ContextPointer Context => _ctx;
 
-        public static LlamaModel LoadFromFile(string strFileName) {
-            Native.ContextParams par = Native.Functions.LlamaContextDefaultParams();
-
-            Pointers.ContextPointer ctx = new Pointers.ContextPointer();
-            ctx.Value = Native.Functions.LlamaInitFromFile(Encoding.UTF8.GetBytes(strFileName), par);
-            if (!ctx.Initialized)
-                throw new ModelLoadException(strFileName);
-
-            return new LlamaModel(ctx, strFileName);
-        }
+        [Obsolete("Do not use. Call LlamaLibrary.GetInstance().LoadModel() instead. Otherwise, an access violation will occur if llama.cpp was built with CUDA.")]
+        public static LlamaModel LoadFromFile(string strFileName)
+            => LlamaLibrary.GetInstance(false).LoadModel(strFileName);
 
         public void WaitForPreload(WaitHandle whCancel = null, int nTimeout = -1) {
             if (_pldModelFile != null) {
@@ -53,7 +43,7 @@ namespace Azimecha.Llamination.LlamaCpp {
         }
 
         public int[] Tokenize(string strText) {
-            byte[] arrTextUTF8 = Encoding.UTF8.GetBytes(strText);
+            byte[] arrTextUTF8 = InteropUtils.ToNarrowString(strText);
 
             int nTokens = -Native.Functions.LlamaTokenize(_ctx.Value, arrTextUTF8, null, 0, false);
             int[] arrTokens = new int[nTokens];
@@ -63,6 +53,28 @@ namespace Azimecha.Llamination.LlamaCpp {
                 throw new TokenizationException(strText, nResult);
 
             return arrTokens;
+        }
+
+
+        public int Sample(int[] arrPrevTokens) => Sample(arrPrevTokens, _sampPenalizer, _sampFinal);
+
+        public unsafe int Sample(int[] arrPrevTokens, params ITokenSampler[] arrSamplers) {
+            if (arrSamplers.Length == 0)
+                throw new ArgumentNullException(nameof(arrSamplers));
+
+            SamplingCandidate[] arrCandidates = new SamplingCandidate[VocabularySize];
+            float* pLogits = GetLogitsPointer();
+
+            for (int nToken = 0; nToken < arrCandidates.Length; nToken++) {
+                arrCandidates[nToken].TokenID = nToken;
+                arrCandidates[nToken].Logit = pLogits[nToken];
+            }
+
+            int nResult = -1;
+            foreach (ITokenSampler samp in arrSamplers)
+                nResult = samp.Apply(arrCandidates, arrPrevTokens);
+
+            return nResult;
         }
 
         // for some reason llama uses limited "scratch space" instead of malloc
@@ -97,14 +109,28 @@ namespace Azimecha.Llamination.LlamaCpp {
             return InteropUtils.ReadCString(pszTokenUTF8, Encoding.UTF8);
         }
 
-        public int Sample(int[] arrPrevTokensToAvoid)
-            => Native.Functions.LlamaSampleTopPTopK(_ctx.Value, arrPrevTokensToAvoid, arrPrevTokensToAvoid.Length,
-                TokenConsiderationCount, MinimumTokenProbability, RepeatPenalty);
+        public int VocabularySize {
+            get {
+                int nValue = Native.Functions.LlamaGetNVocab(_ctx.Value);
+                if (nValue < 0)
+                    throw new LlamaException($"llama_n_vocab returned {nValue}");
+                return nValue;
+            }
+        }
 
         public unsafe ref float Logit(int nToken) {
-            // FIXME - this is bad, no checking of argument or ptr validity
-            return ref *((float*)Native.Functions.LlamaGetLogits(_ctx.Value) + nToken);
+            if (nToken < 0)
+                throw new ArgumentOutOfRangeException(nameof(nToken));
+
+            int nVocabSize = VocabularySize;
+            if (nToken >= nVocabSize)
+                throw new IndexOutOfRangeException($"Token index {nToken} is invalid for model with vocabulary size {nVocabSize}");
+            
+            return ref *(GetLogitsPointer() + nToken);
         }
+
+        private unsafe float* GetLogitsPointer()
+            => (float*)Native.Functions.LlamaGetLogits(_ctx.Value);
 
         public void Dispose() {
             Pointers.ContextPointer ctx = _ctx;

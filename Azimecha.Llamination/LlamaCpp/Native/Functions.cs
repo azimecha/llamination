@@ -5,14 +5,23 @@ using System.Text;
 
 namespace Azimecha.Llamination.LlamaCpp.Native {
     internal static class Functions {
+        [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_init_backend")]
+        public static extern void LlamaInitBackend();
+
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_free")]
         public static extern void LlamaFree(IntPtr pContext);
 
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_context_default_params")]
-        public static extern ContextParams LlamaContextDefaultParams();
+        public static extern ContextParams<GenericTensorSplit> LlamaContextDefaultParams_Generic();
+
+        [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_context_default_params")]
+        public static extern ContextParams<CudaTensorSplit> LlamaContextDefaultParams_CUDA();
 
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_init_from_file")]
-        public static extern IntPtr LlamaInitFromFile([In] byte[] arrPathUTF8, ContextParams par);
+        public static extern IntPtr LlamaInitFromFile([In] byte[] arrPathUTF8, ContextParams<GenericTensorSplit> par);
+
+        [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_init_from_file")]
+        public static extern IntPtr LlamaInitFromFile([In] byte[] arrPathUTF8, ContextParams<CudaTensorSplit> par);
 
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_tokenize")]
         public static extern int LlamaTokenize(IntPtr pContext, [In] byte[] arrTextUTF8, [Out] int[] arrTokens, int nMaxTokens,
@@ -30,9 +39,19 @@ namespace Azimecha.Llamination.LlamaCpp.Native {
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_token_eos")]
         public static extern int LlamaTokenEOS();
 
-        [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_sample_top_p_top_k")]
+        /*[DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_sample_top_p_top_k")]
         public static extern int LlamaSampleTopPTopK(IntPtr pContext, [In] int[] arrTokens, int nTokens, int nTopK,
-            float fTopP, float fRepeatPenalty);
+            float fTopP, float fRepeatPenalty);*/
+
+        [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_sample_repetition_penalty")]
+        public static extern void LlamaSampleRepetitionPenalty(IntPtr pContext, IntPtr pCandidateArray, [In] int[] arrPrevTokens,
+            IntPtr nPrevTokens, float fPenalty);
+
+        [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_sample_token_mirostat_v2")]
+        public static extern int LlamaSampleTokenMirostatV2(IntPtr pContext, IntPtr pCandidateArray, float fTau, float fEta, ref float fMu);
+
+        [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_n_vocab")]
+        public static extern int LlamaGetNVocab(IntPtr pContext);
 
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_get_logits")]
         public static extern IntPtr LlamaGetLogits(IntPtr pContext);

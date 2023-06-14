@@ -5,6 +5,8 @@ using Azimecha.Llamination.LlamaCpp;
 
 namespace Azimecha.Llamination.ConsoleUI {
     public static class ConsoleProgram {
+        private const bool LLAMA_BUILT_WITH_CUDA = true;
+
         public static void Main(string[] arrArgs) {
             if (arrArgs.Length < 1) {
                 Console.WriteLine("No model specified");
@@ -15,7 +17,7 @@ namespace Azimecha.Llamination.ConsoleUI {
                 Random rand = new();
 
                 Console.Error.WriteLine(" ====> LOADING MODEL");
-                LlamaModel mdl = LlamaModel.LoadFromFile(arrArgs[0]);
+                LlamaModel mdl = LlamaLibrary.GetInstance(LLAMA_BUILT_WITH_CUDA).LoadModel(arrArgs[0]);
                 Console.Error.WriteLine(" ====> LOADING DATA");
                 mdl.WaitForPreload();
                 Console.Error.WriteLine(" ====> LOAD COMPLETED");

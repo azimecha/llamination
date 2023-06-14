@@ -10,8 +10,10 @@ namespace Azimecha.Llamination.TextGeneration {
 
         string TokenToString(int nToken);
 
-        int Sample(int[] arrPrevTokensToAvoid);
+        int Sample(int[] arrPrevTokens);
+        int Sample(int[] arrPrevTokens, params ITokenSampler[] arrSamplers);
 
+        int VocabularySize { get; }
         float GetLogit(int nToken);
         void SetLogit(int nToken, float fValue);
     }

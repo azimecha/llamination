@@ -36,5 +36,16 @@ namespace Azimecha.Llamination {
             *(int*)pEmptyString = 0;
             return pEmptyString;
         }
+
+        public static readonly Encoding UTF8NoBOM = new UTF8Encoding(false, false);
+
+        public static byte[] ToNarrowString(string str, Encoding enc = null) {
+            if (enc is null)
+                enc = UTF8NoBOM;
+
+            byte[] arrData = new byte[enc.GetByteCount(str) + 1];
+            enc.GetBytes(str, 0, str.Length, arrData, 0);
+            return arrData;
+        }
     }
 }
