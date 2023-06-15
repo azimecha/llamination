@@ -16,14 +16,18 @@ namespace Azimecha.Llamination.LlamaListen {
             string strAudioPath = arrArgs[1];
 
             try {
-                ISpeechRecognitionModel mdl = DeepSpeech.DeepSpeechModel.LoadFromFile(strModelPath);
-                ITranscriptionInterface tsc = new DeepSpeech.DeepSpeechTranscriber((DeepSpeech.DeepSpeechModel)mdl);
+                //ISpeechRecognitionModel mdl = DeepSpeech.DeepSpeechModel.LoadFromFile(strModelPath);
+                //ITranscriptionInterface tsc = new DeepSpeech.DeepSpeechTranscriber((DeepSpeech.DeepSpeechModel)mdl);
+                ISpeechRecognitionModel mdl = WhisperModel.Load(strModelPath);
+                ITranscriptionInterface tsc = new WhisperTranscriptionInterface((WhisperModel)mdl, SamplingStrategy.BeamSearch);
 
                 byte[] arrData = System.IO.File.ReadAllBytes(strAudioPath);
                 float[] arrSamples = new float[arrData.Length / sizeof(float)];
                 Extras.InterpetAsSamples(arrData, arrSamples);
 
+                DateTime dtStart = DateTime.UtcNow;
                 tsc.ProcessAudio(arrSamples);
+                Console.WriteLine("Processing took {0:F2} seconds", (DateTime.UtcNow - dtStart).TotalSeconds);
 
                 for (int nSegment = 0; nSegment < tsc.SegmentCount; nSegment++)
                     Console.WriteLine("[{0:hh\\:mm\\:ss\\.fff}]  {1}", tsc.GetStartOffset(nSegment), tsc.GetText(nSegment));

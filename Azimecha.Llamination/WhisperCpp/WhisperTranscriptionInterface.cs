@@ -147,11 +147,13 @@ namespace Azimecha.Llamination.WhisperCpp {
             };
         }
 
+        private const int TIME_MULTIPLIER = 180; // undocumented, determined empirically, not perfect
+
         public TimeSpan GetStartOffset(int nSegment)
-            => TimeSpan.FromSeconds((float)GetStartTime(nSegment) / WhisperModel.REQUIRED_AUDIO_SAMPLE_RATE);
+            => TimeSpan.FromSeconds((float)GetStartTime(nSegment) * TIME_MULTIPLIER / WhisperModel.REQUIRED_AUDIO_SAMPLE_RATE);
 
         public TimeSpan GetEndOffset(int nSegment)
-            => TimeSpan.FromSeconds((float)GetEndTime(nSegment) / WhisperModel.REQUIRED_AUDIO_SAMPLE_RATE);
+            => TimeSpan.FromSeconds((float)GetEndTime(nSegment) * TIME_MULTIPLIER / WhisperModel.REQUIRED_AUDIO_SAMPLE_RATE);
 
         public void Dispose() {
             _mdl = null;
