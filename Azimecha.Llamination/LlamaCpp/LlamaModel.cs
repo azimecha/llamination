@@ -5,10 +5,10 @@ using System.Text;
 using System.Threading;
 
 namespace Azimecha.Llamination.LlamaCpp {
-    public class LlamaModel : ITokenBasedLLM {
+    public class LlamaModel : ITokenBasedLLM, ISelectableStateModel<LlamaState> {
         private Pointers.ContextPointer _ctx;
         private Preloader _pldModelFile;
-        private ITokenSampler _sampPenalizer, _sampFinal;
+        private ITokenSampler[] _arrDefaultSampleSteps;
 
         internal LlamaModel(Pointers.ContextPointer ctx, string strFileForPreload = null) {
             _ctx = ctx;
@@ -21,8 +21,10 @@ namespace Azimecha.Llamination.LlamaCpp {
                 _pldModelFile.Start();
             }
 
-            _sampPenalizer = new Samplers.RepetitionPenalizer(this, 1.10f);
-            _sampFinal = new Samplers.MirostatV2Sampler(this);
+            _arrDefaultSampleSteps = new ITokenSampler[] {
+                new Samplers.RepetitionPenalizer(this, 1.10f),
+                new Samplers.MirostatV2Sampler(this)
+            };
         }
 
         public int Threads { get; set; }
@@ -56,12 +58,13 @@ namespace Azimecha.Llamination.LlamaCpp {
         }
 
 
-        public int Sample(int[] arrPrevTokens) => Sample(arrPrevTokens, _sampPenalizer, _sampFinal);
+        public int Sample(int[] arrPrevTokens) 
+            => Sample(arrPrevTokens, (IEnumerable<ITokenSampler>)_arrDefaultSampleSteps);
 
-        public unsafe int Sample(int[] arrPrevTokens, params ITokenSampler[] arrSamplers) {
-            if (arrSamplers.Length == 0)
-                throw new ArgumentNullException(nameof(arrSamplers));
+        public int Sample(int[] arrPrevTokens, params ITokenSampler[] arrSamplers)
+            => Sample(arrPrevTokens, (IEnumerable<ITokenSampler>)arrSamplers);
 
+        public unsafe int Sample(int[] arrPrevTokens, IEnumerable<ITokenSampler> enuSamplers) {
             SamplingCandidate[] arrCandidates = new SamplingCandidate[VocabularySize];
             float* pLogits = GetLogitsPointer();
 
@@ -71,7 +74,7 @@ namespace Azimecha.Llamination.LlamaCpp {
             }
 
             int nResult = -1;
-            foreach (ITokenSampler samp in arrSamplers)
+            foreach (ITokenSampler samp in enuSamplers)
                 nResult = samp.Apply(arrCandidates, arrPrevTokens);
 
             return nResult;
@@ -147,5 +150,17 @@ namespace Azimecha.Llamination.LlamaCpp {
 
         public void SetLogit(int nToken, float fValue)
             => Logit(nToken) = fValue;
+
+        public LlamaState GetCurrentState()
+            => LlamaState.ReadFromModel(this);
+
+        public void SetState(LlamaState state) {
+            long nReqStateSize = (long)Native.Functions.LlamaGetStateSize(_ctx.Value);
+
+            if (state.BufferSize != nReqStateSize)
+                throw new FormatException($"Model requires state of size {nReqStateSize}, not size {state.BufferSize}");
+
+            Native.Functions.LlamaSetStateData(_ctx.Value, state.Buffer);
+        }
     }
 }

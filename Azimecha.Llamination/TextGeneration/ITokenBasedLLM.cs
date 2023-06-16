@@ -12,6 +12,7 @@ namespace Azimecha.Llamination.TextGeneration {
 
         int Sample(int[] arrPrevTokens);
         int Sample(int[] arrPrevTokens, params ITokenSampler[] arrSamplers);
+        int Sample(int[] arrPrevTokens, IEnumerable<ITokenSampler> enuSamplers);
 
         int VocabularySize { get; }
         float GetLogit(int nToken);

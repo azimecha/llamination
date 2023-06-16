@@ -7,82 +7,66 @@ namespace Azimecha.Llamination.LlamaCpp {
     public class LlamaPromptInterface : IPromptInterface {
         private LlamaModel _mdl;
         private List<int> _lstPrevTokens = new List<int>();
-        private bool _bIsReadingResponse = false;
         private List<string> _lstSentenceTerminators = new List<string>() { ".", "?", "!" };
+        private List<ITokenSampler> _lstSamplers = new List<ITokenSampler>();
+        private LlamaState _stateOriginal;
 
         public LlamaPromptInterface(LlamaModel mdl) {
             _mdl = mdl;
             MemorySize = 256;
-            MaxRepeatCount = 3;
+
+            _lstSamplers.Add(new Samplers.RepetitionPenalizer(mdl, 1.10f));
+            _lstSamplers.Add(new Samplers.MirostatV2Sampler(mdl));
+
+            _stateOriginal = mdl.GetCurrentState();
         }
 
         public int MemorySize { get; set; }
-        public int MaxRepeatCount { get; set; }
         public ICollection<string> SentenceTerminators => _lstSentenceTerminators;
+        public IList<ITokenSampler> Samplers => _lstSamplers;
 
-        public void ProvidePrompt(string strMessage, bool bReset = false) {
-            if (_bIsReadingResponse)
-                throw new InvalidOperationException("Cannot send message while reading response");
+        public void ResetState() {
+            _mdl.SetState(_stateOriginal);
+            _lstPrevTokens.Clear();
+        }
 
+        public void ProvidePrompt(string strMessage) {
             int[] arrMessageTokens = _mdl.Tokenize(strMessage);
 
             int[] arrPromptTokensFull = new int[arrMessageTokens.Length + 1];
             arrPromptTokensFull[0] = Extras.BeginningOfStringToken;
             Extras.FastCopy(arrMessageTokens, 0, arrPromptTokensFull, 1, arrMessageTokens.Length);
-            _mdl.Evaluate(arrPromptTokensFull, bReset ? 0 : _lstPrevTokens.Count);
 
-            if (bReset)
-                _lstPrevTokens.Clear();
-            _lstPrevTokens.AddRange(arrPromptTokensFull);
+            _mdl.Evaluate(arrPromptTokensFull, _lstPrevTokens.Count);
+
+            foreach (int nPromptToken in arrPromptTokensFull)
+                _lstPrevTokens.Insert(0, nPromptToken);
         }
 
-        private int LastToken => _lstPrevTokens[_lstPrevTokens.Count - 1];
+        public int ReadToken() {
+            while (_lstPrevTokens.Count > MemorySize)
+                _lstPrevTokens.RemoveAt(0);
 
-        private bool DidExceedRepeatCount() {
-            if (MaxRepeatCount <= 0)
-                return false;
+            int nToken = _mdl.Sample(_lstPrevTokens.ToArray(), _lstSamplers);
+            _mdl.Evaluate(new int[] { nToken }, _lstPrevTokens.Count);
 
-            if (_lstPrevTokens.Count <= MaxRepeatCount)
-                return false;
+            _lstPrevTokens.Insert(0, nToken);
 
-            int nLastToken = LastToken;
-            for (int nIndexToCheck = _lstPrevTokens.Count - 2; nIndexToCheck > _lstPrevTokens.Count - (MaxRepeatCount + 1); nIndexToCheck--)
-                if (_lstPrevTokens[nIndexToCheck] != nLastToken)
-                    return false;
-
-            return true;
+            return nToken;
         }
 
-        public void ReadResponseTokens(ResponseReceiver procReceiver) {
-            int nToken = 0;
-
-            do {
-                while (_lstPrevTokens.Count > MemorySize)
-                    _lstPrevTokens.RemoveAt(0);
-
-                if (DidExceedRepeatCount())
-                    _mdl.Logit(LastToken) = 0.0f;
-
-                int[] arrPrevTokens = _lstPrevTokens.ToArray();
-
-                Array.Reverse(arrPrevTokens);
-                nToken = _mdl.Sample(arrPrevTokens);
-                _mdl.Evaluate(new int[] { nToken }, _lstPrevTokens.Count);
-
-                _lstPrevTokens.Add(nToken);
-            } while (procReceiver(nToken));
-        }
-
-        public string ReadSentence(int nMaxTokensToRead = -1) {
-            if (nMaxTokensToRead == 0)
+        public string ReadSentence(int nApproxSizeLimit = int.MaxValue) {
+            if (nApproxSizeLimit == 0)
                 return string.Empty;
 
             StringBuilder sbSentence = new StringBuilder();
             bool bSentenceIsEmpty = true;
 
-            ReadResponseTokens(nToken => {
+            while (sbSentence.Length < nApproxSizeLimit) {
+                int nToken = ReadToken();
+
                 if (nToken == Extras.EndOfStringToken && !bSentenceIsEmpty)
-                    return false;
+                    break;
 
                 string strCurToken = _mdl.TokenToString(nToken);
                 string strTrimmedToken = strCurToken.TrimEnd();
@@ -91,16 +75,18 @@ namespace Azimecha.Llamination.LlamaCpp {
                     foreach (string strTerminator in _lstSentenceTerminators) {
                         if (strTrimmedToken.EndsWith(strTerminator)) {
                             sbSentence.Append(strCurToken);
-                            return false;
+                            goto L_breakbreak;
                         }
                     }
                 }
 
                 if (strCurToken.EndsWith("\n")) {
+                    sbSentence.Append(strCurToken.TrimEnd('\r', '\n'));
+
                     if (bSentenceIsEmpty)
-                        return true; // ignore & continue
+                        continue;
                     else
-                        return false; // stop
+                        break;
                 }
 
                 if (bSentenceIsEmpty && !string.IsNullOrEmpty(strTrimmedToken))
@@ -108,12 +94,9 @@ namespace Azimecha.Llamination.LlamaCpp {
 
                 sbSentence.Append(strCurToken);
                 System.Diagnostics.Debug.WriteLine($"{nToken} => {sbSentence}");
+            }
 
-                if (nMaxTokensToRead > 0)
-                    nMaxTokensToRead -= 1;
-                return nMaxTokensToRead != 0; // continue
-            });
-
+            L_breakbreak:
             return sbSentence.ToString();
         }
 

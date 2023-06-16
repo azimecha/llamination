@@ -5,13 +5,15 @@ using System.Text;
 namespace Azimecha.Llamination.TextGeneration {
     public interface IPromptInterface : IDisposable {
         int MemorySize { get; set; }
-        int MaxRepeatCount { get; set; }
         ICollection<string> SentenceTerminators { get; }
+        IList<ITokenSampler> Samplers { get; }
 
-        void ProvidePrompt(string strMessage, bool bReset = false);
-        void ReadResponseTokens(ResponseReceiver procReceiver);
-        string ReadSentence(int nMaxSize = -1);
+        void ResetState();
+        void ProvidePrompt(string strMessage);
+        string ReadSentence(int nApproxSizeLimit = int.MaxValue);
     }
 
-    public delegate bool ResponseReceiver(int nToken);
+    public interface ITokenPromptInterface : IPromptInterface {
+        int ReadToken();
+    }
 }

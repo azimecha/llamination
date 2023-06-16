@@ -20,15 +20,23 @@ namespace Azimecha.Llamination.ConsoleUI {
                 LlamaModel mdl = LlamaLibrary.GetInstance(LLAMA_BUILT_WITH_CUDA).LoadModel(arrArgs[0]);
                 Console.Error.WriteLine(" ====> LOADING DATA");
                 mdl.WaitForPreload();
+                Console.Error.WriteLine(" ====> RETRIEVING INTERFACE");
+                LlamaPromptInterface pi = new LlamaPromptInterface(mdl);
                 Console.Error.WriteLine(" ====> LOAD COMPLETED");
                 Console.Error.WriteLine();
-
-                LlamaPromptInterface pi = new LlamaPromptInterface(mdl);
 
                 while (true) {
                     Console.Error.Write("> ");
                     Console.Error.Flush();
-                    pi.ProvidePrompt(Console.ReadLine());
+                    string strLine = Console.ReadLine();
+
+                    if (strLine.Trim().ToLowerInvariant() == "reset") {
+                        pi.ResetState();
+                        Console.Error.WriteLine("(model state reset)");
+                        continue;
+                    }
+
+                    pi.ProvidePrompt(strLine);
 
                     for (int nSentencesToGenerate = rand.Next(1, 5); nSentencesToGenerate > 0; nSentencesToGenerate--) {
                         Console.Write(pi.ReadSentence());
