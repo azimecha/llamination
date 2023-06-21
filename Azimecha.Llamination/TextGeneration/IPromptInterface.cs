@@ -4,7 +4,6 @@ using System.Text;
 
 namespace Azimecha.Llamination.TextGeneration {
     public interface IPromptInterface : IDisposable {
-        int MemorySize { get; set; }
         ICollection<string> SentenceTerminators { get; }
         IList<ITokenSampler> Samplers { get; }
 

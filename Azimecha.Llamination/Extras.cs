@@ -5,9 +5,6 @@ using System.Text;
 
 namespace Azimecha.Llamination {
     public static class Extras {
-        public static int BeginningOfStringToken => LlamaCpp.Native.Functions.LlamaTokenBOS();
-        public static int EndOfStringToken => LlamaCpp.Native.Functions.LlamaTokenEOS();
-
         public static ulong IntPtrMax => (IntPtr.Size < 8) ? 1UL << (IntPtr.Size) : ulong.MaxValue;
 
         private const int MEMCPY_COUNT_THRESHOLD = 256;

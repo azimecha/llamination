@@ -53,6 +53,9 @@ namespace Azimecha.Llamination.LlamaCpp.Native {
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_n_vocab")]
         public static extern int LlamaGetNVocab(IntPtr pContext);
 
+        [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_n_ctx")]
+        public static extern int LlamaGetNCtx(IntPtr pContext);
+
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_get_logits")]
         public static extern IntPtr LlamaGetLogits(IntPtr pContext);
 

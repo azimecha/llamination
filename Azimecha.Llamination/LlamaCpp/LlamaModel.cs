@@ -162,5 +162,11 @@ namespace Azimecha.Llamination.LlamaCpp {
 
             Native.Functions.LlamaSetStateData(_ctx.Value, state.Buffer);
         }
+
+        public int ContextSize 
+            => Native.Functions.LlamaGetNCtx(_ctx.Value);
+
+        public int BeginningOfStringToken => Native.Functions.LlamaTokenBOS();
+        public int EndOfStringToken => Native.Functions.LlamaTokenEOS();
     }
 }

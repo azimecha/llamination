@@ -17,5 +17,10 @@ namespace Azimecha.Llamination.TextGeneration {
         int VocabularySize { get; }
         float GetLogit(int nToken);
         void SetLogit(int nToken, float fValue);
+
+        int ContextSize { get; }
+
+        int BeginningOfStringToken { get; }
+        int EndOfStringToken { get; }
     }
 }
