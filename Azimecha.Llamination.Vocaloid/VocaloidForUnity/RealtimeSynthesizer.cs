@@ -4,16 +4,18 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Azimecha.Llamination.Vocaloid.VocaloidForUnity {
-    public class VforUSynthesizer : IStatementSynthesizer {
+    public class RealtimeSynthesizer : IStatementSynthesizer {
         private VforUVocaloid _voc;
         private int _nChannels;
 
-        public VforUSynthesizer(VforUVocaloid voc, int nChannels) {
+        public RealtimeSynthesizer(VforUVocaloid voc, int nChannels) {
             if (nChannels < 1)
                 throw new ArgumentOutOfRangeException(nameof(nChannels));
 
             _voc = voc;
             _nChannels = nChannels;
+
+            voc.State.StartRealtime();
 
             DelayPerSyllable = TimeSpan.FromSeconds(0.30);
             DelayBetweenSyllables = TimeSpan.FromSeconds(0.01);

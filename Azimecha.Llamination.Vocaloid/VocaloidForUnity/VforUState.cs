@@ -27,6 +27,9 @@ namespace Azimecha.Llamination.Vocaloid.VocaloidForUnity {
 
         private VforUState(string strINIFolderPath) {
             APIErrorException.Check(V4UAPI.YVFStartup(InteropUtils.ToNarrowString("personal"), InteropUtils.ToNarrowString(strINIFolderPath)));
+        }
+
+        public void StartRealtime() {
             APIErrorException.Check(V4UAPI.YVFRealtimeSetStaticSetting(RealtimeMode.Mode2048));
             APIErrorException.Check(V4UAPI.YVFRealtimeStart());
         }

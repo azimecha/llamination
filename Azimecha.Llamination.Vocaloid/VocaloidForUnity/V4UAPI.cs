@@ -40,6 +40,24 @@ namespace Azimecha.Llamination.Vocaloid.VocaloidForUnity {
         public static extern APIResult YVFRealtimeStop();
 
         [DllImport(LIBRARY_NAME)]
+        public static extern int YVFOpenSong();
+
+        [DllImport(LIBRARY_NAME)]
+        public static extern APIResult YVFAddTrack(int nHandle, out short nTrack);
+
+        [DllImport(LIBRARY_NAME)]
+        public static extern int YVFGetNumTracks(int nHandle);
+
+        [DllImport(LIBRARY_NAME)]
+        public static extern APIResult YVFEditPart(int nHandle, short nTrack, ref PartHead head, out int nPartHandle);
+
+        [DllImport(LIBRARY_NAME)]
+        public static extern APIResult YVFPourLyricsInPart(int nHandle, int nPartHandle, int nStartTime, byte[] arrLyricsUTF8, Language nLanguage);
+
+        [DllImport(LIBRARY_NAME)]
+        public static extern void YVFCloseSong(int nHandle);
+
+        [DllImport(LIBRARY_NAME)]
         public static extern APIResult YVFShutdown();
     }
 }

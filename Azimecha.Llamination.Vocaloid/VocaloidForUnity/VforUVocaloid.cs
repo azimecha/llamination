@@ -21,7 +21,7 @@ namespace Azimecha.Llamination.Vocaloid.VocaloidForUnity {
 
         public IStatementSynthesizer CreateStatementSynthesizer(ref int nChannels, ref int nSampleRate) {
             nSampleRate = V4UAPI.SAMPLE_RATE;
-            return new VforUSynthesizer(this, nChannels);
+            return new RealtimeSynthesizer(this, nChannels);
         }
 
         public void Dispose() {
