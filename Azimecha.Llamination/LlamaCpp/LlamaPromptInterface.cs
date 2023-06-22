@@ -9,7 +9,7 @@ namespace Azimecha.Llamination.LlamaCpp {
         private List<List<int>> _lstPrevTokens = new List<List<int>>();
         private List<string> _lstSentenceTerminators = new List<string>() { ".", "?", "!" };
         private List<ITokenSampler> _lstSamplers = new List<ITokenSampler>();
-        private LlamaState _stateOriginal;
+        private LlamaManagedState _stateOriginal;
 
         public LlamaPromptInterface(LlamaModel mdl) {
             _mdl = mdl;

@@ -4,17 +4,17 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Azimecha.Llamination.LlamaCpp {
-    public class LlamaState : IDisposable {
+    public class LlamaNativeState : IDisposable {
         private Pointers.HGlobalPointer _ptrData;
         private long _nTotalBytes, _nValidBytes;
 
-        internal LlamaState(Pointers.HGlobalPointer ptrData, long nTotalBytes, long nValidBytes) {
+        internal LlamaNativeState(Pointers.HGlobalPointer ptrData, long nTotalBytes, long nValidBytes) {
             _ptrData = ptrData;
             _nTotalBytes = nTotalBytes;
             _nValidBytes = nValidBytes;
         }
 
-        internal LlamaState(IntPtr nSize) {
+        internal LlamaNativeState(IntPtr nSize) {
             _ptrData = new Pointers.HGlobalPointer();
 
             IntPtr pData = IntPtr.Zero;
@@ -30,9 +30,9 @@ namespace Azimecha.Llamination.LlamaCpp {
             _nTotalBytes = (long)nSize;
         }
 
-        public static LlamaState ReadFromModel(LlamaModel mdl) {
+        public static LlamaNativeState ReadFromModel(LlamaModel mdl) {
             IntPtr nSizeEst = Native.Functions.LlamaGetStateSize(mdl.Context.Value);
-            LlamaState state = new LlamaState(nSizeEst);
+            LlamaNativeState state = new LlamaNativeState(nSizeEst);
             state._nValidBytes = (long)Native.Functions.LlamaCopyStateData(mdl.Context.Value, state._ptrData.Value);
             return state;
         }

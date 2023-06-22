@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 
 namespace Azimecha.Llamination.LlamaCpp {
-    public class LlamaModel : ITokenBasedLLM, ISelectableStateModel<LlamaState> {
+    public class LlamaModel : ITokenBasedLLM, ISelectableStateModel<LlamaManagedState> {
         private Pointers.ContextPointer _ctx;
         private Preloader _pldModelFile;
         private ITokenSampler[] _arrDefaultSampleSteps;
@@ -151,17 +151,11 @@ namespace Azimecha.Llamination.LlamaCpp {
         public void SetLogit(int nToken, float fValue)
             => Logit(nToken) = fValue;
 
-        public LlamaState GetCurrentState()
-            => LlamaState.ReadFromModel(this);
+        public LlamaManagedState GetCurrentState()
+            => new LlamaManagedState(this);
 
-        public void SetState(LlamaState state) {
-            long nReqStateSize = (long)Native.Functions.LlamaGetStateSize(_ctx.Value);
-
-            if (state.BufferSize != nReqStateSize)
-                throw new FormatException($"Model requires state of size {nReqStateSize}, not size {state.BufferSize}");
-
-            Native.Functions.LlamaSetStateData(_ctx.Value, state.Buffer);
-        }
+        public void SetState(LlamaManagedState state)
+            => state.WriteToModel(this);
 
         public int ContextSize 
             => Native.Functions.LlamaGetNCtx(_ctx.Value);
