@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 
 namespace Azimecha.Llamination.LlamaCpp {
-    public class LlamaModel : ITokenBasedLLM, ISelectableStateModel<LlamaManagedState> {
+    public class LlamaModel : ITokenBasedLLM, ISelectableStateModel<LlamaState> {
         private Pointers.ContextPointer _ctx;
         private Preloader _pldModelFile;
         private ITokenSampler[] _arrDefaultSampleSteps;
@@ -135,6 +135,9 @@ namespace Azimecha.Llamination.LlamaCpp {
         private unsafe float* GetLogitsPointer()
             => (float*)Native.Functions.LlamaGetLogits(_ctx.Value);
 
+        internal unsafe IntPtr LogitBuffer
+            => (IntPtr)GetLogitsPointer();
+
         public void Dispose() {
             Pointers.ContextPointer ctx = _ctx;
             _ctx = null;
@@ -151,10 +154,10 @@ namespace Azimecha.Llamination.LlamaCpp {
         public void SetLogit(int nToken, float fValue)
             => Logit(nToken) = fValue;
 
-        public LlamaManagedState GetCurrentState()
-            => new LlamaManagedState(this);
+        public LlamaState GetCurrentState()
+            => new LlamaState(this);
 
-        public void SetState(LlamaManagedState state)
+        public void SetState(LlamaState state)
             => state.WriteToModel(this);
 
         public int ContextSize 
@@ -162,5 +165,19 @@ namespace Azimecha.Llamination.LlamaCpp {
 
         public int BeginningOfStringToken => Native.Functions.LlamaTokenBOS();
         public int EndOfStringToken => Native.Functions.LlamaTokenEOS();
+
+        private unsafe float* GetEmbeddingsPointer()
+            => (float*)Native.Functions.LlamaGetEmbeddings(_ctx.Value);
+        internal unsafe IntPtr EmbeddingBuffer
+            => (IntPtr)GetEmbeddingsPointer();
+
+        internal int EmbeddingBufferSize
+            => Native.Functions.LlamaGetNEmbed(_ctx.Value);
+
+        public LlamaPromptInterface CreatePromptInterface()
+            => new LlamaPromptInterface(this);
+
+        IPromptInterface ILanguageModel.CreatePromptInterface()
+            => new LlamaPromptInterface(this);
     }
 }

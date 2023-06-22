@@ -56,8 +56,14 @@ namespace Azimecha.Llamination.LlamaCpp.Native {
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_n_ctx")]
         public static extern int LlamaGetNCtx(IntPtr pContext);
 
+        [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_n_embd")]
+        public static extern int LlamaGetNEmbed(IntPtr pContext);
+
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_get_logits")]
         public static extern IntPtr LlamaGetLogits(IntPtr pContext);
+
+        [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_get_embeddings")]
+        public static extern IntPtr LlamaGetEmbeddings(IntPtr pContext);
 
         [DllImport(Constants.LIBRARY_NAME, CallingConvention = CallingConvention.Cdecl, EntryPoint = "llama_get_state_size")]
         public static extern IntPtr LlamaGetStateSize(IntPtr pContext);

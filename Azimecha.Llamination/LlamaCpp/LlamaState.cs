@@ -1,67 +1,49 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Azimecha.Llamination.LlamaCpp {
-    public class LlamaNativeState : IDisposable {
-        private Pointers.HGlobalPointer _ptrData;
-        private long _nTotalBytes, _nValidBytes;
+    public class LlamaState : IDisposable {
+        private float[] _arrLogits;
+        private float[] _arrEmbeddings;
 
-        internal LlamaNativeState(Pointers.HGlobalPointer ptrData, long nTotalBytes, long nValidBytes) {
-            _ptrData = ptrData;
-            _nTotalBytes = nTotalBytes;
-            _nValidBytes = nValidBytes;
+        public LlamaState(LlamaModel mdl) {
+            _arrLogits = ReadData(mdl.LogitBuffer, mdl.VocabularySize);
+            _arrEmbeddings = ReadData(mdl.EmbeddingBuffer, mdl.EmbeddingBufferSize);
         }
 
-        internal LlamaNativeState(IntPtr nSize) {
-            _ptrData = new Pointers.HGlobalPointer();
-
-            IntPtr pData = IntPtr.Zero;
-            try {
-                pData = Marshal.AllocHGlobal(nSize);
-                _ptrData.Value = pData;
-                pData = IntPtr.Zero;
-            } finally {
-                if (!_ptrData.Initialized && pData != IntPtr.Zero)
-                    Marshal.FreeHGlobal(pData);
-            }
-
-            _nTotalBytes = (long)nSize;
+        internal void WriteToModel(LlamaModel mdl) {
+            WriteData(_arrLogits, mdl.LogitBuffer, mdl.VocabularySize);
+            WriteData(_arrEmbeddings, mdl.EmbeddingBuffer, mdl.EmbeddingBufferSize);
         }
 
-        public static LlamaNativeState ReadFromModel(LlamaModel mdl) {
-            IntPtr nSizeEst = Native.Functions.LlamaGetStateSize(mdl.Context.Value);
-            LlamaNativeState state = new LlamaNativeState(nSizeEst);
-            state._nValidBytes = (long)Native.Functions.LlamaCopyStateData(mdl.Context.Value, state._ptrData.Value);
-            return state;
+        private static float[] ReadData(IntPtr pData, int nCount) {
+            if ((pData == IntPtr.Zero) || (nCount == 0))
+                return new float[0];
+
+            float[] arrCopy = new float[nCount];
+            System.Runtime.InteropServices.Marshal.Copy(pData, arrCopy, 0, nCount);
+            return arrCopy;
         }
 
-        internal long BufferSize => _nTotalBytes;
-        internal long DataSize => _nValidBytes;
-        internal IntPtr Buffer => _ptrData.Value;
+        private static unsafe void WriteData(float[] arrSource, IntPtr pDest, int nDestSize) {
+            if ((pDest == IntPtr.Zero) || (nDestSize == 0) || (arrSource is null))
+                return;
 
-        /*public unsafe void WriteTo(System.IO.Stream stmDest) {
-            stmDest.Write(BitConverter.GetBytes(_nTotalBytes), 0, sizeof(long));
-            stmDest.Write(BitConverter.GetBytes(_nValidBytes), 0, sizeof(long));
+            int nCopyCt = arrSource.Length;
+            if (nCopyCt > nDestSize)
+                nCopyCt = nDestSize;
 
-            byte[] arrBuffer = new byte[0xFFFF];
-            byte* pCurSrc = (byte*)_ptrData.Value;
-            long nBytesLeft = _nValidBytes;
-            
-            while (nBytesLeft > 0) {
-                int nCurToWrite = nBytesLeft < arrBuffer.Length ? (int)nBytesLeft : arrBuffer.Length;
+            System.Runtime.InteropServices.Marshal.Copy(arrSource, 0, pDest, nCopyCt);
 
-                Marshal.Copy((IntPtr)pCurSrc, arrBuffer, 0, nCurToWrite);
-                stmDest.Write(arrBuffer, 0, nCurToWrite);
-
-                nBytesLeft -= nCurToWrite;
-                pCurSrc += nCurToWrite;
-            }
-        }*/
+            float* parrDest = (float*)pDest;
+            for (int nToZero = nCopyCt; nToZero < nDestSize; nToZero++)
+                parrDest[nToZero] = 0.0f;
+        }
 
         public void Dispose() {
-            System.Threading.Interlocked.Exchange(ref _ptrData, null)?.Dispose();
+            _arrLogits = null;
+            _arrEmbeddings = null;
         }
     }
 }
