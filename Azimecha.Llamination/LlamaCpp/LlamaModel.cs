@@ -174,6 +174,9 @@ namespace Azimecha.Llamination.LlamaCpp {
         internal int EmbeddingBufferSize
             => Native.Functions.LlamaGetNEmbed(_ctx.Value);
 
+        public IEnumerable<ITokenSampler> DefaultSamplers
+            => _arrDefaultSampleSteps;
+
         public LlamaPromptInterface CreatePromptInterface()
             => new LlamaPromptInterface(this);
 

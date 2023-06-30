@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Azimecha.Llamination.LlamaCpp;
+using Azimecha.Llamination.TextGeneration;
 
 namespace Azimecha.Llamination.ConsoleUI {
     public static class ConsoleProgram {
@@ -15,13 +16,15 @@ namespace Azimecha.Llamination.ConsoleUI {
 
             try {
                 Random rand = new();
+                Dictionary<string, IPromptInterface> dicEndpointPIs = new Dictionary<string, IPromptInterface>();
 
                 Console.Error.WriteLine(" ====> LOADING MODEL");
                 LlamaModel mdl = LlamaLibrary.GetInstance(LLAMA_BUILT_WITH_CUDA).LoadModel(arrArgs[0]);
+                TokenBasedMultiplexer<LlamaModel, LlamaState> mplex = new TokenBasedMultiplexer<LlamaModel, LlamaState>(mdl);
                 Console.Error.WriteLine(" ====> LOADING DATA");
                 mdl.WaitForPreload();
                 Console.Error.WriteLine(" ====> RETRIEVING INTERFACE");
-                LlamaPromptInterface pi = new LlamaPromptInterface(mdl);
+                IPromptInterface piCur = dicEndpointPIs[string.Empty] = mplex.CreateEndpoint().CreatePromptInterface();
                 Console.Error.WriteLine(" ====> LOAD COMPLETED");
                 Console.Error.WriteLine();
 
@@ -30,16 +33,32 @@ namespace Azimecha.Llamination.ConsoleUI {
                     Console.Error.Flush();
                     string strLine = Console.ReadLine();
 
-                    if (strLine.Trim().ToLowerInvariant() == "reset") {
-                        pi.ResetState();
-                        Console.Error.WriteLine("(model state reset)");
-                        continue;
+                    string[] arrPieces = strLine.Trim().ToLowerInvariant().Split(' ');
+
+                    if (arrPieces.Length > 0) {
+                        switch (arrPieces[0]) {
+                            case "reset":
+                                piCur.ResetState();
+                                Console.Error.WriteLine("(model state reset)");
+                                continue;
+
+                            case "conv":
+                                if (arrPieces.Length < 2)
+                                    continue;
+                                if (dicEndpointPIs.TryGetValue(arrPieces[1], out IPromptInterface piExisting))
+                                    piCur = piExisting;
+                                else
+                                    piCur = dicEndpointPIs[arrPieces[1]] = mplex.CreateEndpoint().CreatePromptInterface();
+                                Console.Error.WriteLine($"(switched to conversation {arrPieces[1]})");
+                                continue;
+                        }
                     }
 
-                    pi.ProvidePrompt(strLine);
+
+                    piCur.ProvidePrompt(strLine);
 
                     for (int nSentencesToGenerate = rand.Next(1, 5); nSentencesToGenerate > 0; nSentencesToGenerate--) {
-                        Console.Write(pi.ReadSentence());
+                        Console.Write(piCur.ReadSentence());
                         Console.Out.Flush();
                     }
 
